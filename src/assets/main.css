@@ -1,0 +1,21 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family:
+    ui-rounded,
+    'SF Pro Rounded',
+    system-ui,
+    sans-serif;
+  background: radial-gradient(circle at 30% 20%, #fff7fb 0%, #fde7f4 42%, #d8f6f4 100%);
+  min-height: 100dvh;
+  color: #4b3f55;
+}
+
+#app {
+  min-height: 100dvh;
+}
