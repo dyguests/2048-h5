@@ -80,7 +80,7 @@ const swipe = useSwipe(executeMove);
 }
 
 .hud {
-  width: min(92vw, 520px);
+  width: min(92vw, 420px);
   display: flex;
   gap: 12px;
   align-items: center;
@@ -138,7 +138,7 @@ const swipe = useSwipe(executeMove);
 }
 
 .center {
-  width: min(92vw, 520px);
+  width: min(92vw, 420px);
   display: grid;
   place-items: center;
 }

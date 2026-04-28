@@ -37,9 +37,6 @@ defineProps<{
 .surface {
   --pad: clamp(10px, 3vw, 14px);
   --gap: clamp(10px, 3vw, 12px);
-  --cell-size: calc(
-    (100% - 2 * var(--pad) - 3 * var(--gap)) / 4
-  );
   position: relative;
   width: min(92vw, 420px);
   aspect-ratio: 1 / 1;
@@ -76,6 +73,11 @@ defineProps<{
   position: absolute;
   inset: var(--pad);
   pointer-events: none;
-  --cell-size: calc((100% - 3 * var(--gap)) / 4);
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(4, 1fr);
+  gap: var(--gap);
+  align-items: stretch;
+  justify-items: stretch;
 }
 </style>

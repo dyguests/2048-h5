@@ -16,17 +16,23 @@ function tierFrom(v: number) {
 }
 
 const tier = computed(() => tierFrom(props.value));
+
+/** 与 Board 中 .holes 使用同一套 4×4 + gap 网格，避免 translate+calc 在部分浏览器下失效导致 tiles 堆叠。 */
+const gridPlace = computed(() => ({
+  gridRowStart: String(props.row + 1),
+  gridColumnStart: String(props.col + 1),
+  transitionProperty: 'grid-row-start, grid-column-start, filter, box-shadow',
+  transitionDuration: `${props.animMs}ms, ${props.animMs}ms, 260ms, 260ms`,
+  transitionTimingFunction:
+    'cubic-bezier(0.38, 0.93, 0.22, 1), cubic-bezier(0.38, 0.93, 0.22, 1), ease, ease',
+}));
 </script>
 
 <template>
   <div
     class="tile"
     :class="{ 'is-moving': sliding, [`tier-${tier}`]: true }"
-    :style="{
-      '--r': row,
-      '--c': col,
-      '--anim': `${animMs}ms`,
-    }"
+    :style="gridPlace"
   >
     <span>{{ value }}</span>
   </div>
@@ -34,24 +40,14 @@ const tier = computed(() => tierFrom(props.value));
 
 <style scoped>
 .tile {
-  width: var(--cell-size);
-  height: var(--cell-size);
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  box-sizing: border-box;
   border-radius: 18px;
   display: grid;
   place-items: center;
-
-  position: absolute;
-  left: 0;
-  top: 0;
-  transition:
-    transform var(--anim) cubic-bezier(0.38, 0.93, 0.22, 1),
-    filter 260ms ease,
-    box-shadow 260ms ease;
-
-  transform: translate(
-    calc(var(--gap) + var(--c) * (var(--cell-size) + var(--gap))),
-    calc(var(--gap) + var(--r) * (var(--cell-size) + var(--gap)))
-  );
 
   box-shadow:
     0 6px 14px rgba(186, 90, 212, 0.25),
