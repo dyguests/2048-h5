@@ -21,17 +21,18 @@ const tier = computed(() => tierFrom(props.value));
 const gridPlace = computed(() => ({
   gridRowStart: String(props.row + 1),
   gridColumnStart: String(props.col + 1),
-  transitionProperty: 'grid-row-start, grid-column-start, filter, box-shadow',
-  transitionDuration: `${props.animMs}ms, ${props.animMs}ms, 260ms, 260ms`,
+  transitionProperty: 'grid-row-start, grid-column-start',
+  transitionDuration: `${props.animMs}ms, ${props.animMs}ms`,
   transitionTimingFunction:
-    'cubic-bezier(0.38, 0.93, 0.22, 1), cubic-bezier(0.38, 0.93, 0.22, 1), ease, ease',
+    'cubic-bezier(0.38, 0.93, 0.22, 1), cubic-bezier(0.38, 0.93, 0.22, 1)',
 }));
 </script>
 
 <template>
   <div
     class="tile"
-    :class="{ 'is-moving': sliding, [`tier-${tier}`]: true }"
+    :class="`tier-${tier}`"
+    :data-sliding="sliding"
     :style="gridPlace"
   >
     <span>{{ value }}</span>
@@ -71,13 +72,5 @@ const gridPlace = computed(() => ({
 
 .tier-3.tile {
   background: linear-gradient(155deg, #ffd8ff, #ff9be3 62%, #ffeefc);
-}
-
-.is-moving.tile {
-  filter: saturate(1.12) brightness(1.05);
-  box-shadow:
-    12px -6px 18px rgba(255, 154, 220, 0.45),
-    -10px 6px 20px rgba(255, 255, 255, 0.6),
-    0 28px 0 rgba(220, 40, 150, 0.08) inset;
 }
 </style>
