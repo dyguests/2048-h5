@@ -24,7 +24,7 @@ const gridPlace = computed(() => ({
   transitionProperty: 'grid-row-start, grid-column-start',
   transitionDuration: `${props.animMs}ms, ${props.animMs}ms`,
   transitionTimingFunction:
-    'cubic-bezier(0.38, 0.93, 0.22, 1), cubic-bezier(0.38, 0.93, 0.22, 1)',
+    'cubic-bezier(0.33, 1, 0.68, 1), cubic-bezier(0.33, 1, 0.68, 1)',
 }));
 </script>
 

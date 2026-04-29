@@ -15,6 +15,8 @@ const {
   newGame,
   continueAfterWin,
   lastMergeCells,
+  lastDirection,
+  unlockAudio,
   ANIM_MS,
 } = useGame2048();
 
@@ -23,7 +25,7 @@ const swipe = useSwipe(executeMove);
 </script>
 
 <template>
-  <div class="app-shell">
+  <div class="app-shell" @pointerdown.once="unlockAudio">
     <header class="hud">
       <div>
         <p class="title">可爱 2048</p>
@@ -49,6 +51,7 @@ const swipe = useSwipe(executeMove);
         :anim-ms="ANIM_MS"
         :sliding="moving"
         :merges="moving ? lastMergeCells : []"
+        :direction="lastDirection"
         v-bind="swipe"
       />
     </section>

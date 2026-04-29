@@ -2,12 +2,14 @@
 import Tile from './Tile.vue';
 import FxCanvas from './FxCanvas.vue';
 import type { TileVM } from '../game/view';
+import type { Direction } from '../game/types';
 
 defineProps<{
   tiles: TileVM[];
   animMs: number;
   sliding: boolean;
   merges: { row: number; col: number }[];
+  direction: Direction | null;
 }>();
 </script>
 
@@ -29,7 +31,13 @@ defineProps<{
       />
     </div>
 
-    <FxCanvas :merges="merges" :sliding="sliding" :anim-ms="animMs" />
+    <FxCanvas
+      :tiles="tiles"
+      :direction="direction"
+      :merges="merges"
+      :sliding="sliding"
+      :anim-ms="animMs"
+    />
   </div>
 </template>
 

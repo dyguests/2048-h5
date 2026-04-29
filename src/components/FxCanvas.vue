@@ -5,17 +5,23 @@ import {
   onMounted,
   onBeforeUnmount,
 } from 'vue';
+import type { Direction } from '../game/types';
+import type { TileVM } from '../game/view';
 
 const props = withDefaults(
   defineProps<{
     merges: { row: number; col: number }[];
     sliding: boolean;
     animMs: number;
+    tiles: TileVM[];
+    direction: Direction | null;
   }>(),
   {
     merges: () => [],
     sliding: false,
     animMs: 220,
+    tiles: () => [],
+    direction: null,
   },
 );
 
@@ -26,10 +32,14 @@ const size = ref({ w: 300 });
 const pad = 10;
 const gap = 10;
 
-function cellCenter(row: number, col: number) {
+function cellSize() {
   const w = size.value.w;
   const inner = Math.max(0, w - 2 * pad - 3 * gap);
-  const cell = inner / 4;
+  return inner / 4;
+}
+
+function cellCenter(row: number, col: number) {
+  const cell = cellSize();
   const x = pad + gap + col * (cell + gap) + cell / 2;
   const y = pad + gap + row * (cell + gap) + cell / 2;
   return { x, y };
@@ -50,16 +60,20 @@ interface Particle {
   life: number;
   maxLife: number;
   hue: number;
+  kind?: 'dust';
 }
 
 const particles: Particle[] = [];
+
+/** Motion trail polyline samples per tile id */
+const trailMap = new Map<string, { x: number; y: number }[]>();
 
 function spawn(init: Omit<Particle, 'life'> & { life?: number }) {
   particles.push({
     ...init,
     life: init.life ?? 0,
   });
-  while (particles.length > 420) particles.shift();
+  while (particles.length > 480) particles.shift();
 }
 
 function burst(count: number, row: number, col: number) {
@@ -74,6 +88,58 @@ function burst(count: number, row: number, col: number) {
       vy: Math.sin(angle) * spd,
       maxLife: 36 + Math.random() * 28,
       hue: 310 + Math.random() * 55,
+      life: 0,
+    });
+  }
+}
+
+function trailOffset(dir: Direction, cell: number) {
+  const k = cell * 0.44;
+  switch (dir) {
+    case 'up':
+      return { dx: (Math.random() - 0.5) * 5, dy: k };
+    case 'down':
+      return { dx: (Math.random() - 0.5) * 5, dy: -k };
+    case 'left':
+      return { dx: k, dy: (Math.random() - 0.5) * 5 };
+    case 'right':
+      return { dx: -k, dy: (Math.random() - 0.5) * 5 };
+  }
+}
+
+function frictionDrift(dir: Direction) {
+  const r = () => (Math.random() - 0.5) * 1.1;
+  switch (dir) {
+    case 'up':
+      return { vx: r(), vy: 0.35 + Math.random() * 0.75 };
+    case 'down':
+      return { vx: r(), vy: -0.35 - Math.random() * 0.75 };
+    case 'left':
+      return { vx: 0.35 + Math.random() * 0.75, vy: r() };
+    case 'right':
+      return { vx: -0.35 - Math.random() * 0.75, vy: r() };
+  }
+}
+
+function frictionSpawn() {
+  if (!props.sliding || !props.direction || !props.tiles.length) return;
+  const dir = props.direction;
+  const cell = cellSize();
+  if (!(cell > 2)) return;
+
+  for (const t of props.tiles) {
+    if (Math.random() > 0.92) continue;
+    const { x, y } = cellCenter(t.row, t.col);
+    const off = trailOffset(dir, cell);
+    const drift = frictionDrift(dir);
+    spawn({
+      x: x + off.dx,
+      y: y + off.dy,
+      vx: drift.vx,
+      vy: drift.vy,
+      maxLife: 11 + Math.random() * 14,
+      hue: 28 + Math.random() * 38,
+      kind: 'dust',
       life: 0,
     });
   }
@@ -96,6 +162,26 @@ function shimmerTick() {
   }
 }
 
+function updateTrails() {
+  if (!props.sliding || !props.tiles.length) {
+    return;
+  }
+  for (const t of props.tiles) {
+    const { x, y } = cellCenter(t.row, t.col);
+    const buf = trailMap.get(t.id) ?? [];
+    buf.push({ x, y });
+    if (buf.length > 18) buf.shift();
+    trailMap.set(t.id, buf);
+  }
+}
+
+watch(
+  () => props.sliding,
+  (sliding) => {
+    if (!sliding) trailMap.clear();
+  },
+);
+
 let mergeTimer = 0;
 
 watch(
@@ -116,12 +202,34 @@ watch(
 let active = false;
 let raf = 0;
 
+function drawTrails(ctx: CanvasRenderingContext2D) {
+  if (!trailMap.size) return;
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  trailMap.forEach((pts) => {
+    if (pts.length < 2) return;
+    ctx.beginPath();
+    ctx.moveTo(pts[0]!.x, pts[0]!.y);
+    for (let i = 1; i < pts.length; i++)
+      ctx.lineTo(pts[i]!.x, pts[i]!.y);
+    ctx.strokeStyle = 'rgba(255, 182, 220, 0.38)';
+    ctx.lineWidth = 5;
+    ctx.shadowColor = 'rgba(255, 120, 200, 0.25)';
+    ctx.shadowBlur = 6;
+    ctx.stroke();
+  });
+  ctx.restore();
+}
+
 function tick() {
   if (!canvasRef.value) {
     raf = requestAnimationFrame(tick);
     return;
   }
   shimmerTick();
+  frictionSpawn();
+  updateTrails();
 
   const dpr =
     typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
@@ -139,6 +247,8 @@ function tick() {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, side, side);
 
+  drawTrails(ctx);
+
   for (let i = particles.length - 1; i >= 0; i--) {
     const p = particles[i]!;
     if (p.life >= p.maxLife) {
@@ -146,31 +256,25 @@ function tick() {
       continue;
     }
     p.life++;
-    p.x += p.vx + (Math.random() - 0.5) * 0.2;
-    p.y += p.vy + Math.random() * 0.1;
-    p.vy += 0.036;
+    p.x += p.vx + (Math.random() - 0.5) * (p.kind === 'dust' ? 0.35 : 0.2);
+    p.y += p.vy + Math.random() * (p.kind === 'dust' ? 0.06 : 0.1);
+    p.vy += p.kind === 'dust' ? 0.024 : 0.036;
     const t = p.life / p.maxLife;
     const alpha = Math.max(0, (1 - t) * (1 - t));
-    ctx.globalAlpha = Math.min(1, alpha * 1.05);
-    const grd = ctx.createRadialGradient(
-      p.x,
-      p.y,
-      1,
-      p.x,
-      p.y,
-      8 * (1 - t * 0.65),
-    );
+    ctx.globalAlpha = Math.min(1, alpha * (p.kind === 'dust' ? 0.85 : 1.05));
+    const rad = p.kind === 'dust' ? 2.6 : 4.2 * (1 - t * 0.5);
+    const grd = ctx.createRadialGradient(p.x, p.y, 1, p.x, p.y, 8 * (1 - t * 0.65));
     grd.addColorStop(
       0,
-      `hsla(${p.hue}, 95%, 80%, ${alpha})`,
+      `hsla(${p.hue}, ${p.kind === 'dust' ? 72 : 95}%, ${p.kind === 'dust' ? 74 : 80}%, ${alpha})`,
     );
     grd.addColorStop(
       1,
-      `hsla(${p.hue}, 90%, 60%, 0)`,
+      `hsla(${p.hue}, ${p.kind === 'dust' ? 65 : 90}%, 60%, 0)`,
     );
     ctx.fillStyle = grd;
     ctx.beginPath();
-    ctx.arc(p.x, p.y, 4.2 * (1 - t * 0.5), 0, Math.PI * 2);
+    ctx.arc(p.x, p.y, rad, 0, Math.PI * 2);
     ctx.fill();
     ctx.globalAlpha = 1;
   }

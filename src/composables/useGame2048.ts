@@ -10,9 +10,12 @@ import {
 } from '../game/engine';
 import { flattenGrid, buildTargetsMap } from '../game/view';
 import type { TileVM } from '../game/view';
+import { useAudio2048 } from './useAudio2048';
 
 const BEST_KEY = 'cute2048-best';
 export const ANIM_MS = 220;
+
+const audio = useAudio2048();
 
 export function useGame2048() {
   const grid = shallowRef(createInitialGrid());
@@ -21,6 +24,7 @@ export function useGame2048() {
   const moving = ref(false);
   const animTiles = shallowRef<TileVM[]>([]);
   const lastMergeCells = ref<{ row: number; col: number }[]>([]);
+  const lastDirection = ref<Direction | null>(null);
 
   const lost = ref(false);
   const winBanner = ref(false);
@@ -43,11 +47,16 @@ export function useGame2048() {
 
     const targets = buildTargetsMap(before, res.grid, res.mergeEvents);
 
+    lastDirection.value = dir;
     animTiles.value = flattenGrid(before);
     lastMergeCells.value = res.mergedCells;
     moving.value = true;
 
     await nextTick();
+    audio.playMove();
+    if (res.mergedCells.length) {
+      window.setTimeout(() => audio.playMerge(), ANIM_MS * 0.46);
+    }
     animTiles.value = animTiles.value.map((t) => {
       const p = targets.get(t.id);
       const pos = p ?? { r: t.row, c: t.col };
@@ -62,18 +71,26 @@ export function useGame2048() {
       window.setTimeout(resolve, ANIM_MS);
     });
 
+    const prevBest = best.value;
     grid.value = spawnTile(res.grid);
     score.value += res.scoreDelta;
-    if (score.value > best.value) {
+    const brokeBest = score.value > prevBest;
+    if (brokeBest) {
       best.value = score.value;
       localStorage.setItem(BEST_KEY, String(best.value));
     }
 
     moving.value = false;
     animTiles.value = [];
+    lastDirection.value = null;
 
     if (hasWon(grid.value) && !winBanner.value) winBanner.value = true;
-    if (isGameOver(grid.value)) lost.value = true;
+    const dead = isGameOver(grid.value);
+    if (dead) lost.value = true;
+
+    if (brokeBest && dead) audio.playNewBest();
+    else if (dead) audio.playGameOver();
+    else if (brokeBest) audio.playNewBest();
   }
 
   function dismissWin() {
@@ -87,6 +104,7 @@ export function useGame2048() {
     moving.value = false;
     animTiles.value = [];
     winBanner.value = false;
+    lastDirection.value = null;
   }
 
   function continueAfterWin() {
@@ -106,6 +124,8 @@ export function useGame2048() {
     dismissWin,
     continueAfterWin,
     lastMergeCells,
+    lastDirection,
+    unlockAudio: audio.unlock,
     ANIM_MS,
   };
 }
