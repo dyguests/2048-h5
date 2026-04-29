@@ -7,6 +7,11 @@ const props = defineProps<{
   col: number;
   animMs: number;
   sliding: boolean;
+  mergePop?: boolean;
+}>();
+
+const emit = defineEmits<{
+  mergePopDone: [];
 }>();
 
 function tierFrom(v: number) {
@@ -26,6 +31,10 @@ const gridPlace = computed(() => ({
   transitionTimingFunction:
     'cubic-bezier(0.33, 1, 0.68, 1), cubic-bezier(0.33, 1, 0.68, 1)',
 }));
+
+function onMergeAnimEnd() {
+  if (props.mergePop) emit('mergePopDone');
+}
 </script>
 
 <template>
@@ -35,7 +44,13 @@ const gridPlace = computed(() => ({
     :data-sliding="sliding"
     :style="gridPlace"
   >
-    <span>{{ value }}</span>
+    <div
+      class="tile-face"
+      :class="{ 'is-merge-pop': mergePop }"
+      @animationend="onMergeAnimEnd"
+    >
+      <span>{{ value }}</span>
+    </div>
   </div>
 </template>
 
@@ -48,18 +63,45 @@ const gridPlace = computed(() => ({
   box-sizing: border-box;
   border-radius: 18px;
   display: grid;
-  place-items: center;
+  place-items: stretch;
 
   box-shadow:
     0 6px 14px rgba(186, 90, 212, 0.25),
     0 12px 0 rgba(110, 50, 150, 0.05) inset;
 }
 
-.tile span {
+.tile-face {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  border-radius: inherit;
+  display: grid;
+  place-items: center;
+  transform-origin: center center;
+}
+
+.tile-face span {
   font-weight: 800;
   font-size: clamp(16px, 5.4vw, 28px);
   letter-spacing: 0.03em;
   color: rgba(67, 28, 90, 0.96);
+}
+
+@keyframes merge-pop-kf {
+  0% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.tile-face.is-merge-pop {
+  animation: merge-pop-kf 0.26s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
 .tier-1.tile {

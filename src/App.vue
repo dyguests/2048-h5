@@ -16,6 +16,8 @@ const {
   continueAfterWin,
   lastMergeCells,
   lastDirection,
+  mergePulseIds,
+  clearMergePulse,
   unlockAudio,
   ANIM_MS,
 } = useGame2048();
@@ -52,6 +54,8 @@ const swipe = useSwipe(executeMove);
         :sliding="moving"
         :merges="moving ? lastMergeCells : []"
         :direction="lastDirection"
+        :merge-pulse-ids="mergePulseIds"
+        :clear-merge-pulse="clearMergePulse"
         v-bind="swipe"
       />
     </section>

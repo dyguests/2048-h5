@@ -10,6 +10,8 @@ defineProps<{
   sliding: boolean;
   merges: { row: number; col: number }[];
   direction: Direction | null;
+  mergePulseIds: Set<string>;
+  clearMergePulse: (id: string) => void;
 }>();
 </script>
 
@@ -28,6 +30,8 @@ defineProps<{
         :col="t.col"
         :anim-ms="animMs"
         :sliding="sliding"
+        :merge-pop="mergePulseIds.has(t.id)"
+        @merge-pop-done="clearMergePulse(t.id)"
       />
     </div>
 

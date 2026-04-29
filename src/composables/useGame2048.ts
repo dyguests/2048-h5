@@ -25,6 +25,8 @@ export function useGame2048() {
   const animTiles = shallowRef<TileVM[]>([]);
   const lastMergeCells = ref<{ row: number; col: number }[]>([]);
   const lastDirection = ref<Direction | null>(null);
+  /** Survivor tile ids that should play merge scale pulse after settle */
+  const mergePulseIds = ref(new Set<string>());
 
   const lost = ref(false);
   const winBanner = ref(false);
@@ -91,6 +93,17 @@ export function useGame2048() {
     if (brokeBest && dead) audio.playNewBest();
     else if (dead) audio.playGameOver();
     else if (brokeBest) audio.playNewBest();
+
+    await nextTick();
+    mergePulseIds.value = new Set(
+      res.mergeEvents.map((m) => m.survivingId),
+    );
+  }
+
+  function clearMergePulse(id: string) {
+    const next = new Set(mergePulseIds.value);
+    next.delete(id);
+    mergePulseIds.value = next;
   }
 
   function dismissWin() {
@@ -105,6 +118,7 @@ export function useGame2048() {
     animTiles.value = [];
     winBanner.value = false;
     lastDirection.value = null;
+    mergePulseIds.value = new Set();
   }
 
   function continueAfterWin() {
@@ -125,6 +139,8 @@ export function useGame2048() {
     continueAfterWin,
     lastMergeCells,
     lastDirection,
+    mergePulseIds,
+    clearMergePulse,
     unlockAudio: audio.unlock,
     ANIM_MS,
   };
